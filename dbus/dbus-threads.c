@@ -549,6 +549,7 @@ dbus_threads_init (const DBusThreadFunctions *functions)
 {
   dbus_bool_t mutex_set;
   dbus_bool_t recursive_mutex_set;
+  DBusThreadFunctions local_functions = thread_functions;
 
   _dbus_assert (functions != NULL);
 
@@ -609,39 +610,40 @@ dbus_threads_init (const DBusThreadFunctions *functions)
   _dbus_assert ((functions->mask & ~DBUS_THREAD_FUNCTIONS_ALL_MASK) == 0);
 
   if (thread_init_generation != _dbus_current_generation)
-    thread_functions.mask = 0; /* allow re-init in new generation */
+    local_functions.mask = 0; /* allow re-init in new generation */
  
   /* Silently allow multiple init
    * First init wins and D-Bus will always use its threading system 
    */ 
-  if (thread_functions.mask != 0)
+  if (local_functions.mask != 0)
     return TRUE;
   
-  thread_functions.mutex_new = functions->mutex_new;
-  thread_functions.mutex_free = functions->mutex_free;
-  thread_functions.mutex_lock = functions->mutex_lock;
-  thread_functions.mutex_unlock = functions->mutex_unlock;
+  local_functions.mutex_new  = functions->mutex_new;
+  local_functions.mutex_free = functions->mutex_free;
+  local_functions.mutex_lock = functions->mutex_lock;
+  local_functions.mutex_unlock = functions->mutex_unlock;
   
-  thread_functions.condvar_new = functions->condvar_new;
-  thread_functions.condvar_free = functions->condvar_free;
-  thread_functions.condvar_wait = functions->condvar_wait;
-  thread_functions.condvar_wait_timeout = functions->condvar_wait_timeout;
-  thread_functions.condvar_wake_one = functions->condvar_wake_one;
-  thread_functions.condvar_wake_all = functions->condvar_wake_all;
+  local_functions.condvar_new  = functions->condvar_new;
+  local_functions.condvar_free = functions->condvar_free;
+  local_functions.condvar_wait = functions->condvar_wait;
+  local_functions.condvar_wait_timeout = functions->condvar_wait_timeout;
+  local_functions.condvar_wake_one = functions->condvar_wake_one;
+  local_functions.condvar_wake_all = functions->condvar_wake_all;
  
   if (functions->mask & DBUS_THREAD_FUNCTIONS_RECURSIVE_MUTEX_NEW_MASK)
-    thread_functions.recursive_mutex_new = functions->recursive_mutex_new;
+    local_functions.recursive_mutex_new = functions->recursive_mutex_new;
   
   if (functions->mask & DBUS_THREAD_FUNCTIONS_RECURSIVE_MUTEX_FREE_MASK)
-    thread_functions.recursive_mutex_free = functions->recursive_mutex_free;
+    local_functions.recursive_mutex_free = functions->recursive_mutex_free;
   
   if (functions->mask & DBUS_THREAD_FUNCTIONS_RECURSIVE_MUTEX_LOCK_MASK)
-    thread_functions.recursive_mutex_lock = functions->recursive_mutex_lock;
+    local_functions.recursive_mutex_lock = functions->recursive_mutex_lock;
 
   if (functions->mask & DBUS_THREAD_FUNCTIONS_RECURSIVE_MUTEX_UNLOCK_MASK)
-    thread_functions.recursive_mutex_unlock = functions->recursive_mutex_unlock;
+    local_functions.recursive_mutex_unlock = functions->recursive_mutex_unlock;
 
-  thread_functions.mask = functions->mask;
+  local_functions.mask = functions->mask;
+  thread_functions = local_functions;
 
   if (!init_locks ())
     return FALSE;
